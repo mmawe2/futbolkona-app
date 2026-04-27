@@ -1,0 +1,2 @@
+import Nav from '@/components/Nav'
+export default function Page(){return <main className="min-h-screen bg-fkblack"><Nav/><section className="mx-auto max-w-4xl px-6 py-20"><h1 className="text-4xl font-bold">About FutbolKona</h1><p className="mt-4 text-fkmuted">FutbolKona is built from Cape Town for grassroots footballers to build football CVs and verified player identity.</p></section></main>}
