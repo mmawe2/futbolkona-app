@@ -7,10 +7,10 @@ export default function RegisterPage() {
   const [message, setMessage] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(setMessage('')e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (loading) return
-
+setLoading(false)
     setLoading(true)
     setMessage('')
 
