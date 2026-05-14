@@ -7,7 +7,21 @@ export default function RegisterPage() {
   const [message, setMessage] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  function handleSubmit(setMessage('')e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(const { error } = await supabase.from('players').insert([
+  {
+    full_name: form.get('full_name'),
+    email: form.get('email'),
+    phone: form.get('phone'),
+    school_club: form.get('school_club'),
+    position: form.get('position'),
+  },
+])
+
+if (error) {
+  setMessage('❌ Failed to save player.')
+} else {
+  setMessage('✅ Football CV created successfully.')
+}setMessage('')e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (loading) return
 setLoading(false)
