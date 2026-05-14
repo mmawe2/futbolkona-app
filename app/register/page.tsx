@@ -8,7 +8,9 @@ export default function RegisterPage() {
   const [message, setMessage] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    e: React.FormEvent<HTMLFormElement>
+  ) {
     e.preventDefault()
 
     if (loading) return
@@ -18,26 +20,29 @@ export default function RegisterPage() {
 
     const form = new FormData(e.currentTarget)
 
-    const password = String(form.get('password') || '')
-    const confirmPassword = String(form.get('confirm_password') || '')
-
-    if (password.length < 6) {
-      setMessage('❌ Password must be at least 6 characters.')
-      setLoading(false)
-      return
-    }
-
-    if (password !== confirmPassword) {
-      setMessage('❌ Passwords do not match.')
-      setLoading(false)
-      return
-    }
-
     const full_name = String(form.get('full_name') || '')
     const email = String(form.get('email') || '')
     const phone = String(form.get('phone') || '')
-    const school_club = String(form.get('school_club') || '')
+    const password = String(form.get('password') || '')
+    const confirm_password = String(
+      form.get('confirm_password') || ''
+    )
+    const school_club = String(
+      form.get('school_club') || ''
+    )
     const position = String(form.get('position') || '')
+
+    if (password.length < 6) {
+      setMessage('❌ Password must be at least 6 characters')
+      setLoading(false)
+      return
+    }
+
+    if (password !== confirm_password) {
+      setMessage('❌ Passwords do not match')
+      setLoading(false)
+      return
+    }
 
     const slug =
       full_name
@@ -46,21 +51,26 @@ export default function RegisterPage() {
       '-' +
       Date.now()
 
-    const { error } = await supabase.from('players').insert([
-      {
-        full_name,
-        email,
-        phone,
-        school_club,
-        position,
-        slug,
-      },
-    ])
+    const { error } = await supabase
+      .from('players')
+      .insert([
+        {
+          full_name,
+          email,
+          phone,
+          school_club,
+          position,
+          slug,
+        },
+      ])
 
     if (error) {
       setMessage('❌ ' + error.message)
     } else {
-      setMessage('✅ Football CV created successfully.')
+      setMessage(
+        '✅ Football CV created successfully'
+      )
+
       e.currentTarget.reset()
     }
 
@@ -73,7 +83,6 @@ export default function RegisterPage() {
         minHeight: '100vh',
         background: '#111827',
         padding: '40px 20px',
-        color: 'white',
       }}
     >
       <div
@@ -84,9 +93,10 @@ export default function RegisterPage() {
       >
         <h1
           style={{
-            fontSize: '32px',
-            marginBottom: '20px',
             color: '#facc15',
+            fontSize: '42px',
+            marginBottom: '30px',
+            fontWeight: 'bold',
           }}
         >
           Register Your Football CV
@@ -117,7 +127,9 @@ export default function RegisterPage() {
 
           <input
             name="password"
-            type={showPassword ? 'text' : 'password'}
+            type={
+              showPassword ? 'text' : 'password'
+            }
             placeholder="Password"
             required
             style={inputStyle}
@@ -125,7 +137,9 @@ export default function RegisterPage() {
 
           <input
             name="confirm_password"
-            type={showPassword ? 'text' : 'password'}
+            type={
+              showPassword ? 'text' : 'password'
+            }
             placeholder="Confirm Password"
             required
             style={inputStyle}
@@ -133,10 +147,14 @@ export default function RegisterPage() {
 
           <button
             type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            style={buttonSecondary}
+            onClick={() =>
+              setShowPassword(!showPassword)
+            }
+            style={showButton}
           >
-            {showPassword ? 'Hide Password' : 'Show Password'}
+            {showPassword
+              ? 'Hide Password'
+              : 'Show Password'}
           </button>
 
           <input
@@ -152,28 +170,33 @@ export default function RegisterPage() {
             required
             style={{
               ...inputStyle,
-              height: '120px',
+              minHeight: '140px',
+              resize: 'vertical',
             }}
           />
 
           <button
             type="submit"
             disabled={loading}
-            style={buttonPrimary}
+            style={submitButton}
           >
-            {loading ? 'Creating...' : 'Create My Football CV'}
+            {loading
+              ? 'Creating...'
+              : 'Create My Football CV'}
           </button>
         </form>
 
         {message && (
-          <p
+          <div
             style={{
               marginTop: '20px',
+              color: 'white',
               fontSize: '18px',
+              fontWeight: 'bold',
             }}
           >
             {message}
-          </p>
+          </div>
         )}
       </div>
     </div>
@@ -182,32 +205,37 @@ export default function RegisterPage() {
 
 const inputStyle = {
   width: '100%',
-  padding: '18px',
-  marginBottom: '18px',
-  borderRadius: '12px',
+  padding: '20px',
+  marginBottom: '20px',
+  borderRadius: '14px',
   border: 'none',
-  fontSize: '16px',
-} as const
+  fontSize: '18px',
+  color: '#111827',
+  backgroundColor: '#ffffff',
+  outline: 'none',
+  boxSizing: 'border-box' as const,
+}
 
-const buttonPrimary = {
+const showButton = {
   width: '100%',
   padding: '18px',
+  marginBottom: '20px',
+  borderRadius: '14px',
+  border: 'none',
+  background: '#1f2937',
+  color: '#ffffff',
+  fontSize: '18px',
+  cursor: 'pointer',
+}
+
+const submitButton = {
+  width: '100%',
+  padding: '20px',
+  borderRadius: '14px',
+  border: 'none',
   background: '#facc15',
   color: '#111827',
-  border: 'none',
-  borderRadius: '12px',
-  fontSize: '18px',
+  fontSize: '20px',
   fontWeight: 'bold',
   cursor: 'pointer',
-} as const
-
-const buttonSecondary = {
-  width: '100%',
-  padding: '14px',
-  background: '#1f2937',
-  color: 'white',
-  border: 'none',
-  borderRadius: '12px',
-  marginBottom: '18px',
-  cursor: 'pointer',
-} as const
+}
