@@ -1,4 +1,5 @@
 'use client'
+
 import { supabase } from '@/lib/supabaseClient'
 import { useState } from 'react'
 
@@ -7,24 +8,11 @@ export default function RegisterPage() {
   const [message, setMessage] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  function handleSubmit(const { error } = await supabase.from('players').insert([
-  {
-    full_name: form.get('full_name'),
-    email: form.get('email'),
-    phone: form.get('phone'),
-    school_club: form.get('school_club'),
-    position: form.get('position'),
-  },
-])
-
-if (error) {
-  setMessage('❌ Failed to save player.')
-} else {
-  setMessage('✅ Football CV created successfully.')
-}setMessage('')e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+
     if (loading) return
-setLoading(false)
+
     setLoading(true)
     setMessage('')
 
@@ -50,18 +38,70 @@ setLoading(false)
       return
     }
 
-    setMessage('✅ Successful! Your Football CV profile has been created.')
+    const { error } = await supabase.from('players').insert([
+      {
+        full_name: form.get('full_name'),
+        email: form.get('email'),
+        phone: form.get('phone'),
+        team: form.get('team'),
+        bio: form.get('bio'),
+        profile_slug: String(form.get('email') || '')
+          .split('@')[0]
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '-'),
+      },
+    ])
+
+    if (error) {
+      setMessage('❌ Failed to save player. Please try again.')
+    } else {
+      setMessage('✅ Successful! Your Football CV profile has been created.')
+      e.currentTarget.reset()
+    }
+
     setLoading(false)
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#111', color: 'white', padding: '40px' }}>
+    <main
+      style={{
+        minHeight: '100vh',
+        background: '#111',
+        color: 'white',
+        padding: '40px',
+      }}
+    >
       <h1>Register Your Football CV</h1>
 
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '16px', maxWidth: '600px' }}>
-        <input name="full_name" placeholder="Full name" required style={{ padding: '14px', borderRadius: '10px', color: 'black' }} />
-        <input name="email" placeholder="Email address" type="email" required style={{ padding: '14px', borderRadius: '10px', color: 'black' }} />
-        <input name="phone" placeholder="Phone number" required style={{ padding: '14px', borderRadius: '10px', color: 'black' }} />
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: 'grid',
+          gap: '16px',
+          maxWidth: '700px',
+        }}
+      >
+        <input
+          name="full_name"
+          placeholder="Full name"
+          required
+          style={{ padding: '14px', borderRadius: '10px', color: 'black' }}
+        />
+
+        <input
+          name="email"
+          placeholder="Email address"
+          type="email"
+          required
+          style={{ padding: '14px', borderRadius: '10px', color: 'black' }}
+        />
+
+        <input
+          name="phone"
+          placeholder="Phone number"
+          required
+          style={{ padding: '14px', borderRadius: '10px', color: 'black' }}
+        />
 
         <input
           name="password"
@@ -81,17 +121,48 @@ setLoading(false)
           style={{ padding: '14px', borderRadius: '10px', color: 'black' }}
         />
 
-        <button type="button" onClick={() => setShowPassword(!showPassword)}>
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          style={{
+            padding: '12px',
+            borderRadius: '10px',
+            background: '#222',
+            color: 'white',
+            border: '1px solid #444',
+          }}
+        >
           {showPassword ? 'Hide Password' : 'Show Password'}
         </button>
 
-        <input name="team" placeholder="Current team / school / academy" style={{ padding: '14px', borderRadius: '10px', color: 'black' }} />
-        <textarea name="bio" placeholder="Short football bio" style={{ padding: '14px', borderRadius: '10px', color: 'black' }} />
+        <input
+          name="team"
+          placeholder="Current team / school / academy"
+          style={{ padding: '14px', borderRadius: '10px', color: 'black' }}
+        />
+
+        <textarea
+          name="bio"
+          placeholder="Short football bio"
+          style={{
+            padding: '14px',
+            borderRadius: '10px',
+            color: 'black',
+            minHeight: '100px',
+          }}
+        />
 
         <button
           type="submit"
           disabled={loading}
-          style={{ padding: '14px', borderRadius: '10px', background: '#facc15', color: 'black', fontWeight: 'bold', opacity: loading ? 0.6 : 1 }}
+          style={{
+            padding: '14px',
+            borderRadius: '10px',
+            background: '#facc15',
+            color: 'black',
+            fontWeight: 'bold',
+            opacity: loading ? 0.6 : 1,
+          }}
         >
           {loading ? 'Creating Football CV...' : 'Create My Football CV'}
         </button>
