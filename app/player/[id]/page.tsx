@@ -1,47 +1,80 @@
-export default function PlayerProfilePage({
+import { supabase } from '@/lib/supabaseClient'
+
+export default async function PlayerProfilePage({
   params,
 }: {
   params: { id: string }
 }) {
+  const { data: player, error } = await supabase
+    .from('players')
+    .select('*')
+    .eq('slug', params.id)
+    .single()
+
+  if (error || !player) {
+    return (
+      <main style={pageStyle}>
+        <h1 style={titleStyle}>Player Not Found</h1>
+        <p>This Football CV profile does not exist yet.</p>
+      </main>
+    )
+  }
+
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#111',
-        color: 'white',
-        padding: '40px',
-      }}
-    >
-      <h1>FutbolKona Football CV</h1>
+    <main style={pageStyle}>
+      <section style={cardStyle}>
+        <h1 style={titleStyle}>FutbolKona Football CV</h1>
 
-      <p>Player Profile ID: {params.id}</p>
+        <h2>{player.full_name}</h2>
 
-      <section
-        style={{
-          marginTop: '30px',
-          padding: '20px',
-          border: '1px solid #333',
-          borderRadius: '12px',
-        }}
-      >
-        <h2>Player Details</h2>
-        <p>Name: Coming soon</p>
-        <p>Position: Coming soon</p>
-        <p>Team / School / Academy: Coming soon</p>
-        <p>Verification Status: Pending</p>
+        <p>
+          <strong>Email:</strong> {player.email}
+        </p>
+
+        <p>
+          <strong>Phone:</strong> {player.phone}
+        </p>
+
+        <p>
+          <strong>School / Club:</strong> {player.school_club}
+        </p>
+
+        <p>
+          <strong>Position:</strong> {player.position}
+        </p>
+
+        <p>
+          <strong>Verification Status:</strong>{' '}
+          {player.verification_status || 'Pending'}
+        </p>
       </section>
 
-      <section
-        style={{
-          marginTop: '30px',
-          padding: '20px',
-          border: '1px solid #333',
-          borderRadius: '12px',
-        }}
-      >
+      <section style={cardStyle}>
         <h2>Football Proof</h2>
-        <p>Videos and match evidence will appear here.</p>
+        <p>Videos, match evidence and QR verification will appear here.</p>
       </section>
     </main>
   )
 }
+
+const pageStyle = {
+  minHeight: '100vh',
+  background: '#111827',
+  color: 'white',
+  padding: '40px 20px',
+} as const
+
+const cardStyle = {
+  maxWidth: '800px',
+  margin: '0 auto 30px auto',
+  padding: '30px',
+  borderRadius: '18px',
+  background: '#1f2937',
+  border: '1px solid #374151',
+} as const
+
+const titleStyle = {
+  color: '#facc15',
+  fontSize: '36px',
+  marginBottom: '20px',
+} as const
