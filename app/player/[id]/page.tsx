@@ -90,7 +90,7 @@ export default function PlayerPage() {
         .getPublicUrl(filePath)
 
       setVideoUrl(data.publicUrl)
-      setUploadMessage('✅ Video uploaded successfully.')
+      setUploadMessage('✅ Video uploaded successfully. Use the button below to open it.')
       event.target.value = ''
     } catch (err) {
       setUploadMessage('❌ Upload failed. Please try a smaller video.')
@@ -146,8 +146,8 @@ export default function PlayerPage() {
         <h2>Upload Football Proof</h2>
 
         <p>
-          Upload a short football clip under 25MB. Use highlights, training
-          clips or match evidence. Longer clips will be added later.
+          Upload a short football clip under 25MB. FK keeps the page lightweight
+          by showing a link instead of loading the full video automatically.
         </p>
 
         <input
@@ -175,15 +175,14 @@ export default function PlayerPage() {
         )}
 
         {videoUrl && (
-          <video
-            controls
-            src={videoUrl}
-            style={{
-              width: '100%',
-              marginTop: '20px',
-              borderRadius: '14px',
-            }}
-          />
+          <a
+            href={videoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={videoButtonStyle}
+          >
+            Open Uploaded Video
+          </a>
         )}
       </section>
     </main>
@@ -210,4 +209,15 @@ const titleStyle = {
   color: '#facc15',
   fontSize: '36px',
   marginBottom: '20px',
+} as const
+
+const videoButtonStyle = {
+  display: 'inline-block',
+  marginTop: '20px',
+  padding: '14px 20px',
+  borderRadius: '12px',
+  background: '#facc15',
+  color: '#111827',
+  fontWeight: 'bold',
+  textDecoration: 'none',
 } as const
