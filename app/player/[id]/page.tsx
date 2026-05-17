@@ -10,8 +10,9 @@ export default function PlayerPage() {
 
   const [player, setPlayer] = useState<any>(null)
   const [videoUrl, setVideoUrl] = useState('')
-  const [uploading, setUploading] = useState(false)
-  const [uploadMessage, setUploadMessage] = useState('')
+  const [uploadingVideo, setUploadingVideo] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [message, setMessage] = useState('')
 
   const profileUrl = `https://futbolkona-app.vercel.app/player/${slug}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(profileUrl)}`
@@ -28,17 +29,96 @@ export default function PlayerPage() {
       .single()
 
     if (error) {
-      setUploadMessage('Could not load player profile.')
+      setMessage('Could not load player profile.')
       return
     }
 
     setPlayer(data)
   }
 
+  async function uploadProfilePhoto(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+
+    setMessage('')
+
+    if (!file) return
+
+    const maxSizeMB = 5
+    const fileSizeMB = file.size / 1024 / 1024
+
+    if (!file.type.startsWith('image/')) {
+      setMessage('❌ Please upload an image file only.')
+      event.target.value = ''
+      return
+    }
+
+    if (fileSizeMB > maxSizeMB) {
+      setMessage(
+        `❌ Photo is too large (${fileSizeMB.toFixed(
+          1
+        )}MB). Please upload a photo under ${maxSizeMB}MB.`
+      )
+      event.target.value = ''
+      return
+    }
+
+    try {
+      setUploadingPhoto(true)
+      setMessage('Uploading profile photo...')
+
+      const cleanFileName = file.name
+        .toLowerCase()
+        .replace(/[^a-z0-9.]/g, '-')
+
+      const filePath = `${slug}/${Date.now()}-${cleanFileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-photos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: file.type,
+        })
+
+      if (uploadError) {
+        setMessage('❌ Photo upload failed: ' + uploadError.message)
+        return
+      }
+
+      const { data } = supabase.storage
+        .from('profile-photos')
+        .getPublicUrl(filePath)
+
+      const publicUrl = data.publicUrl
+
+      const { error: updateError } = await supabase
+        .from('players')
+        .update({ profile_photo_url: publicUrl })
+        .eq('slug', slug)
+
+      if (updateError) {
+        setMessage('❌ Photo saved but profile update failed: ' + updateError.message)
+        return
+      }
+
+      setPlayer({
+        ...player,
+        profile_photo_url: publicUrl,
+      })
+
+      setMessage('✅ Profile photo uploaded successfully.')
+      event.target.value = ''
+    } catch (err) {
+      setMessage('❌ Photo upload failed. Please try again.')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
   async function uploadVideo(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
 
-    setUploadMessage('')
+    setMessage('')
     setVideoUrl('')
 
     if (!file) return
@@ -47,13 +127,13 @@ export default function PlayerPage() {
     const fileSizeMB = file.size / 1024 / 1024
 
     if (!file.type.startsWith('video/')) {
-      setUploadMessage('❌ Please upload a video file only.')
+      setMessage('❌ Please upload a video file only.')
       event.target.value = ''
       return
     }
 
     if (fileSizeMB > maxSizeMB) {
-      setUploadMessage(
+      setMessage(
         `❌ Video is too large (${fileSizeMB.toFixed(
           1
         )}MB). Please upload a short clip under ${maxSizeMB}MB.`
@@ -63,8 +143,8 @@ export default function PlayerPage() {
     }
 
     try {
-      setUploading(true)
-      setUploadMessage('Uploading video. Please wait...')
+      setUploadingVideo(true)
+      setMessage('Uploading video. Please wait...')
 
       const cleanFileName = file.name
         .toLowerCase()
@@ -81,7 +161,7 @@ export default function PlayerPage() {
         })
 
       if (error) {
-        setUploadMessage('❌ Upload failed: ' + error.message)
+        setMessage('❌ Upload failed: ' + error.message)
         return
       }
 
@@ -90,12 +170,12 @@ export default function PlayerPage() {
         .getPublicUrl(filePath)
 
       setVideoUrl(data.publicUrl)
-      setUploadMessage('✅ Video uploaded successfully. Use the button below to open it.')
+      setMessage('✅ Video uploaded successfully. Use the button below to open it.')
       event.target.value = ''
     } catch (err) {
-      setUploadMessage('❌ Upload failed. Please try a smaller video.')
+      setMessage('❌ Upload failed. Please try a smaller video.')
     } finally {
-      setUploading(false)
+      setUploadingVideo(false)
     }
   }
 
@@ -104,7 +184,7 @@ export default function PlayerPage() {
       <main style={pageStyle}>
         <section style={cardStyle}>
           <h1 style={titleStyle}>Loading Player Profile...</h1>
-          {uploadMessage && <p>{uploadMessage}</p>}
+          {message && <p>{message}</p>}
         </section>
       </main>
     )
@@ -114,12 +194,46 @@ export default function PlayerPage() {
     <main style={pageStyle}>
       <section style={cardStyle}>
         <h1 style={titleStyle}>FutbolKona Football CV</h1>
+
+        {player.profile_photo_url ? (
+          <img
+            src={player.profile_photo_url}
+            alt="Player profile photo"
+            style={profilePhotoStyle}
+          />
+        ) : (
+          <div style={photoPlaceholderStyle}>No Profile Photo</div>
+        )}
+
         <h2>{player.full_name}</h2>
         <p><strong>Email:</strong> {player.email}</p>
         <p><strong>Phone:</strong> {player.phone}</p>
         <p><strong>School / Club:</strong> {player.school_club}</p>
         <p><strong>Position:</strong> {player.position}</p>
         <p><strong>Verification Status:</strong> {player.verification_status || 'Pending'}</p>
+
+        <div style={{ marginTop: '20px' }}>
+          <h3>Upload Profile Photo</h3>
+          <p>Upload a clear photo under 5MB.</p>
+
+          <input
+            type="file"
+            accept="image/*"
+            onChange={uploadProfilePhoto}
+            disabled={uploadingPhoto}
+            style={{
+              marginTop: '10px',
+              display: 'block',
+              color: 'white',
+            }}
+          />
+
+          {uploadingPhoto && (
+            <p style={{ marginTop: '10px', color: '#facc15' }}>
+              Uploading photo...
+            </p>
+          )}
+        </div>
       </section>
 
       <section style={cardStyle}>
@@ -154,7 +268,7 @@ export default function PlayerPage() {
           type="file"
           accept="video/*"
           onChange={uploadVideo}
-          disabled={uploading}
+          disabled={uploadingVideo}
           style={{
             marginTop: '20px',
             display: 'block',
@@ -162,15 +276,15 @@ export default function PlayerPage() {
           }}
         />
 
-        {uploading && (
+        {(uploadingVideo || uploadingPhoto) && (
           <p style={{ marginTop: '15px', color: '#facc15' }}>
-            Uploading... please do not close this page.
+            Please do not close this page.
           </p>
         )}
 
-        {uploadMessage && (
+        {message && (
           <p style={{ marginTop: '15px', fontWeight: 'bold' }}>
-            {uploadMessage}
+            {message}
           </p>
         )}
 
@@ -209,6 +323,28 @@ const titleStyle = {
   color: '#facc15',
   fontSize: '36px',
   marginBottom: '20px',
+} as const
+
+const profilePhotoStyle = {
+  width: '140px',
+  height: '140px',
+  objectFit: 'cover',
+  borderRadius: '50%',
+  border: '3px solid #facc15',
+  marginBottom: '20px',
+} as const
+
+const photoPlaceholderStyle = {
+  width: '140px',
+  height: '140px',
+  borderRadius: '50%',
+  border: '3px solid #374151',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#9ca3af',
+  marginBottom: '20px',
+  textAlign: 'center',
 } as const
 
 const videoButtonStyle = {
