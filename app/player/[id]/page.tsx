@@ -11,6 +11,9 @@ export default async function PlayerProfilePage({
     .eq('slug', params.id)
     .single()
 
+  const profileUrl = `https://futbolkona-app.vercel.app/player/${params.id}`
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(profileUrl)}`
+
   if (error || !player) {
     return (
       <main style={pageStyle}>
@@ -26,32 +29,36 @@ export default async function PlayerProfilePage({
         <h1 style={titleStyle}>FutbolKona Football CV</h1>
 
         <h2>{player.full_name}</h2>
+        <p><strong>Email:</strong> {player.email}</p>
+        <p><strong>Phone:</strong> {player.phone}</p>
+        <p><strong>School / Club:</strong> {player.school_club}</p>
+        <p><strong>Position:</strong> {player.position}</p>
+        <p><strong>Verification Status:</strong> {player.verification_status || 'Pending'}</p>
+      </section>
 
-        <p>
-          <strong>Email:</strong> {player.email}
-        </p>
+      <section style={cardStyle}>
+        <h2>QR Player Profile</h2>
+        <p>Scan this QR code to open this player’s Football CV.</p>
 
-        <p>
-          <strong>Phone:</strong> {player.phone}
-        </p>
+        <img
+          src={qrUrl}
+          alt="FutbolKona Player QR Code"
+          style={{
+            marginTop: '20px',
+            background: 'white',
+            padding: '12px',
+            borderRadius: '12px',
+          }}
+        />
 
-        <p>
-          <strong>School / Club:</strong> {player.school_club}
-        </p>
-
-        <p>
-          <strong>Position:</strong> {player.position}
-        </p>
-
-        <p>
-          <strong>Verification Status:</strong>{' '}
-          {player.verification_status || 'Pending'}
+        <p style={{ marginTop: '20px', wordBreak: 'break-all' }}>
+          {profileUrl}
         </p>
       </section>
 
       <section style={cardStyle}>
         <h2>Football Proof</h2>
-        <p>Videos, match evidence and QR verification will appear here.</p>
+        <p>Videos, match evidence and verification will appear here.</p>
       </section>
     </main>
   )
