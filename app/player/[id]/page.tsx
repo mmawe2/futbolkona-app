@@ -1,39 +1,74 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 
-export default async function PlayerProfilePage({
-  params,
-}: {
-  params: { id: string }
-}) {
-  const { data: player, error } = await supabase
-    .from('players')
-    .select('*')
-    .eq('slug', params.id)
-    .single()
+export default function PlayerPage() {
+  const params = useParams()
+  const slug = params.id as string
 
-  const profileUrl = `https://futbolkona-app.vercel.app/player/${params.id}`
+  const [player, setPlayer] = useState<any>(null)
+  const [videoUrl, setVideoUrl] = useState('')
+  const [uploading, setUploading] = useState(false)
+
+  const profileUrl = `https://futbolkona-app.vercel.app/player/${slug}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(profileUrl)}`
 
-  if (error || !player) {
-    return (
-      <main style={pageStyle}>
-        <h1 style={titleStyle}>Player Not Found</h1>
-        <p>This Football CV profile does not exist yet.</p>
-      </main>
-    )
+  useEffect(() => {
+    fetchPlayer()
+  }, [])
+
+  async function fetchPlayer() {
+    const { data } = await supabase
+      .from('players')
+      .select('*')
+      .eq('slug', slug)
+      .single()
+
+    setPlayer(data)
+  }
+
+  async function uploadVideo(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+
+    const fileName = `${slug}-${Date.now()}-${file.name}`
+
+    const { error } = await supabase.storage
+      .from('player-videos')
+      .upload(fileName, file)
+
+    if (error) {
+      alert(error.message)
+      setUploading(false)
+      return
+    }
+
+    const { data } = supabase.storage
+      .from('player-videos')
+      .getPublicUrl(fileName)
+
+    setVideoUrl(data.publicUrl)
+    setUploading(false)
+  }
+
+  if (!player) {
+    return <main style={pageStyle}>Loading player profile...</main>
   }
 
   return (
     <main style={pageStyle}>
       <section style={cardStyle}>
         <h1 style={titleStyle}>FutbolKona Football CV</h1>
-
         <h2>{player.full_name}</h2>
         <p><strong>Email:</strong> {player.email}</p>
         <p><strong>Phone:</strong> {player.phone}</p>
         <p><strong>School / Club:</strong> {player.school_club}</p>
         <p><strong>Position:</strong> {player.position}</p>
-        <p><strong>Verification Status:</strong> {player.verification_status || 'Pending'}</p>
+        <p><strong>Verification Status:</strong> pending</p>
       </section>
 
       <section style={cardStyle}>
@@ -57,8 +92,23 @@ export default async function PlayerProfilePage({
       </section>
 
       <section style={cardStyle}>
-        <h2>Football Proof</h2>
-        <p>Videos, match evidence and verification will appear here.</p>
+        <h2>Upload Football Proof</h2>
+        <p>Upload match clips, training videos or football evidence.</p>
+
+        <input
+          type="file"
+          accept="video/*"
+          onChange={uploadVideo}
+          style={{ marginTop: '20px' }}
+        />
+
+        {uploading && <p>Uploading video...</p>}
+
+        {videoUrl && (
+          <video controls style={{ width: '100%', marginTop: '20px' }}>
+            <source src={videoUrl} />
+          </video>
+        )}
       </section>
     </main>
   )
