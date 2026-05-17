@@ -11,6 +11,7 @@ export default function PlayerPage() {
   const [player, setPlayer] = useState<any>(null)
   const [videoUrl, setVideoUrl] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [uploadMessage, setUploadMessage] = useState('')
 
   const profileUrl = `https://futbolkona-app.vercel.app/player/${slug}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(profileUrl)}`
@@ -20,43 +21,93 @@ export default function PlayerPage() {
   }, [])
 
   async function fetchPlayer() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('players')
       .select('*')
       .eq('slug', slug)
       .single()
+
+    if (error) {
+      setUploadMessage('Could not load player profile.')
+      return
+    }
 
     setPlayer(data)
   }
 
   async function uploadVideo(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
+
+    setUploadMessage('')
+    setVideoUrl('')
+
     if (!file) return
 
-    setUploading(true)
+    const maxSizeMB = 25
+    const fileSizeMB = file.size / 1024 / 1024
 
-    const fileName = `${slug}-${Date.now()}-${file.name}`
-
-    const { error } = await supabase.storage
-      .from('player-videos')
-      .upload(fileName, file)
-
-    if (error) {
-      alert(error.message)
-      setUploading(false)
+    if (!file.type.startsWith('video/')) {
+      setUploadMessage('❌ Please upload a video file only.')
+      event.target.value = ''
       return
     }
 
-    const { data } = supabase.storage
-      .from('player-videos')
-      .getPublicUrl(fileName)
+    if (fileSizeMB > maxSizeMB) {
+      setUploadMessage(
+        `❌ Video is too large (${fileSizeMB.toFixed(
+          1
+        )}MB). Please upload a short clip under ${maxSizeMB}MB.`
+      )
+      event.target.value = ''
+      return
+    }
 
-    setVideoUrl(data.publicUrl)
-    setUploading(false)
+    try {
+      setUploading(true)
+      setUploadMessage('Uploading video. Please wait...')
+
+      const cleanFileName = file.name
+        .toLowerCase()
+        .replace(/[^a-z0-9.]/g, '-')
+
+      const filePath = `${slug}/${Date.now()}-${cleanFileName}`
+
+      const { error } = await supabase.storage
+        .from('player-videos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type,
+        })
+
+      if (error) {
+        setUploadMessage('❌ Upload failed: ' + error.message)
+        return
+      }
+
+      const { data } = supabase.storage
+        .from('player-videos')
+        .getPublicUrl(filePath)
+
+      setVideoUrl(data.publicUrl)
+      setUploadMessage('✅ Video uploaded successfully.')
+      event.target.value = ''
+    } catch (err) {
+      setUploadMessage('❌ Upload failed. Please try a smaller video.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   if (!player) {
-    return <main style={pageStyle}>Loading player profile...</main>
+    return (
+      <main style={pageStyle}>
+        <section style={cardStyle}>
+          <h1 style={titleStyle}>Loading Player Profile...</h1>
+          {uploadMessage && <p>{uploadMessage}</p>}
+        </section>
+      </main>
+    )
   }
 
   return (
@@ -68,7 +119,7 @@ export default function PlayerPage() {
         <p><strong>Phone:</strong> {player.phone}</p>
         <p><strong>School / Club:</strong> {player.school_club}</p>
         <p><strong>Position:</strong> {player.position}</p>
-        <p><strong>Verification Status:</strong> pending</p>
+        <p><strong>Verification Status:</strong> {player.verification_status || 'Pending'}</p>
       </section>
 
       <section style={cardStyle}>
@@ -93,21 +144,46 @@ export default function PlayerPage() {
 
       <section style={cardStyle}>
         <h2>Upload Football Proof</h2>
-        <p>Upload match clips, training videos or football evidence.</p>
+
+        <p>
+          Upload a short football clip under 25MB. Use highlights, training
+          clips or match evidence. Longer clips will be added later.
+        </p>
 
         <input
           type="file"
           accept="video/*"
           onChange={uploadVideo}
-          style={{ marginTop: '20px' }}
+          disabled={uploading}
+          style={{
+            marginTop: '20px',
+            display: 'block',
+            color: 'white',
+          }}
         />
 
-        {uploading && <p>Uploading video...</p>}
+        {uploading && (
+          <p style={{ marginTop: '15px', color: '#facc15' }}>
+            Uploading... please do not close this page.
+          </p>
+        )}
+
+        {uploadMessage && (
+          <p style={{ marginTop: '15px', fontWeight: 'bold' }}>
+            {uploadMessage}
+          </p>
+        )}
 
         {videoUrl && (
-          <video controls style={{ width: '100%', marginTop: '20px' }}>
-            <source src={videoUrl} />
-          </video>
+          <video
+            controls
+            src={videoUrl}
+            style={{
+              width: '100%',
+              marginTop: '20px',
+              borderRadius: '14px',
+            }}
+          />
         )}
       </section>
     </main>
