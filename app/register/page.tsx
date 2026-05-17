@@ -1,45 +1,34 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
 export default function RegisterPage() {
+  const router = useRouter()
+
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
 
-  async function handleSubmit(
-    e: React.FormEvent<HTMLFormElement>
-  ) {
-    e.preventDefault()
-
-    if (loading) return
+  async function handleSubmit(event: any) {
+    event.preventDefault()
 
     setLoading(true)
     setMessage('')
 
-    const form = new FormData(e.currentTarget)
+    const form = new FormData(event.target)
 
-    const full_name = String(form.get('full_name') || '')
-    const email = String(form.get('email') || '')
-    const phone = String(form.get('phone') || '')
-    const password = String(form.get('password') || '')
-    const confirm_password = String(
-      form.get('confirm_password') || ''
-    )
-    const school_club = String(
-      form.get('school_club') || ''
-    )
-    const position = String(form.get('position') || '')
+    const full_name = form.get('full_name') as string
+    const email = form.get('email') as string
+    const phone = form.get('phone') as string
+    const password = form.get('password') as string
+    const confirmPassword = form.get('confirmPassword') as string
+    const school = form.get('school') as string
+    const position = form.get('position') as string
 
-    if (password.length < 6) {
-      setMessage('❌ Password must be at least 6 characters')
-      setLoading(false)
-      return
-    }
-
-    if (password !== confirm_password) {
-      setMessage('❌ Passwords do not match')
+    if (password !== confirmPassword) {
+      setMessage('Passwords do not match')
       setLoading(false)
       return
     }
@@ -51,63 +40,48 @@ export default function RegisterPage() {
       '-' +
       Date.now()
 
-    const { error } = await supabase
-      .from('players')
-      .insert([
-        {
-          full_name,
-          email,
-          phone,
-          school_club,
-          position,
-          slug,
-        },
-      ])
+    const { error } = await supabase.from('players').insert([
+      {
+        full_name,
+        email,
+        phone,
+        school,
+        position,
+        slug,
+      },
+    ])
 
     if (error) {
-      setMessage('❌ ' + error.message)
-    } else {
-      setMessage(
-        '✅ Football CV created successfully'
-      )
-
-      e.currentTarget.reset()
+      setMessage(error.message)
+      setLoading(false)
+      return
     }
+
+    setMessage('Football CV created successfully')
+
+    setTimeout(() => {
+      router.push(`/player/${slug}`)
+    }, 1000)
 
     setLoading(false)
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: '#111827',
-        padding: '40px 20px',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: '700px',
-          margin: '0 auto',
-        }}
-      >
-        <h1
-          style={{
-            color: '#facc15',
-            fontSize: '42px',
-            marginBottom: '30px',
-            fontWeight: 'bold',
-          }}
-        >
+    <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-6">
+      <div className="w-full max-w-3xl bg-[#111827] p-10 rounded-3xl border border-yellow-500/20">
+
+        <h1 className="text-5xl font-bold text-yellow-500 mb-10">
           Register Your Football CV
         </h1>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-6">
+
           <input
             name="full_name"
+            type="text"
             placeholder="Full Name"
             required
-            style={inputStyle}
+            className="w-full p-5 rounded-2xl bg-white text-black text-xl"
           />
 
           <input
@@ -115,127 +89,72 @@ export default function RegisterPage() {
             type="email"
             placeholder="Email"
             required
-            style={inputStyle}
+            className="w-full p-5 rounded-2xl bg-white text-black text-xl"
           />
 
           <input
             name="phone"
+            type="text"
             placeholder="Phone Number"
             required
-            style={inputStyle}
+            className="w-full p-5 rounded-2xl bg-white text-black text-xl"
           />
 
           <input
             name="password"
-            type={
-              showPassword ? 'text' : 'password'
-            }
+            type={showPassword ? 'text' : 'password'}
             placeholder="Password"
             required
-            style={inputStyle}
+            className="w-full p-5 rounded-2xl bg-white text-black text-xl"
           />
 
           <input
-            name="confirm_password"
-            type={
-              showPassword ? 'text' : 'password'
-            }
+            name="confirmPassword"
+            type={showPassword ? 'text' : 'password'}
             placeholder="Confirm Password"
             required
-            style={inputStyle}
+            className="w-full p-5 rounded-2xl bg-white text-black text-xl"
           />
 
           <button
             type="button"
-            onClick={() =>
-              setShowPassword(!showPassword)
-            }
-            style={showButton}
+            onClick={() => setShowPassword(!showPassword)}
+            className="w-full bg-[#1f2937] text-white py-4 rounded-2xl text-2xl"
           >
-            {showPassword
-              ? 'Hide Password'
-              : 'Show Password'}
+            {showPassword ? 'Hide Password' : 'Show Password'}
           </button>
 
           <input
-            name="school_club"
+            name="school"
+            type="text"
             placeholder="School or Club"
             required
-            style={inputStyle}
+            className="w-full p-5 rounded-2xl bg-white text-black text-xl"
           />
 
           <textarea
             name="position"
             placeholder="Playing Position"
             required
-            style={{
-              ...inputStyle,
-              minHeight: '140px',
-              resize: 'vertical',
-            }}
+            className="w-full p-5 rounded-2xl bg-white text-black text-xl h-40"
           />
 
           <button
             type="submit"
             disabled={loading}
-            style={submitButton}
+            className="w-full bg-yellow-500 text-black py-5 rounded-2xl text-2xl font-bold"
           >
-            {loading
-              ? 'Creating...'
-              : 'Create My Football CV'}
+            {loading ? 'Creating...' : 'Create My Football CV'}
           </button>
-        </form>
 
-        {message && (
-          <div
-            style={{
-              marginTop: '20px',
-              color: 'white',
-              fontSize: '18px',
-              fontWeight: 'bold',
-            }}
-          >
-            {message}
-          </div>
-        )}
+          {message && (
+            <p className="text-center text-white text-xl">
+              {message}
+            </p>
+          )}
+
+        </form>
       </div>
     </div>
   )
-}
-
-const inputStyle = {
-  width: '100%',
-  padding: '20px',
-  marginBottom: '20px',
-  borderRadius: '14px',
-  border: 'none',
-  fontSize: '18px',
-  color: '#111827',
-  backgroundColor: '#ffffff',
-  outline: 'none',
-  boxSizing: 'border-box' as const,
-}
-
-const showButton = {
-  width: '100%',
-  padding: '18px',
-  marginBottom: '20px',
-  borderRadius: '14px',
-  border: 'none',
-  background: '#1f2937',
-  color: '#ffffff',
-  fontSize: '18px',
-  cursor: 'pointer',
-}
-
-const submitButton = {
-  width: '100%',
-  padding: '20px',
-  borderRadius: '14px',
-  border: 'none',
-  background: '#facc15',
-  color: '#111827',
-  fontSize: '20px',
-  fontWeight: 'bold',
-  cursor: 'pointer',
 }
