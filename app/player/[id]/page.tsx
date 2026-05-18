@@ -13,6 +13,7 @@ export default function PlayerPage() {
   const [uploadingVideo, setUploadingVideo] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [message, setMessage] = useState('')
+  const [profileComplete, setProfileComplete] = useState(false)
 
   const profileUrl = `https://futbolkona-app.vercel.app/player/${slug}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(profileUrl)}`
@@ -38,7 +39,6 @@ export default function PlayerPage() {
 
   async function uploadProfilePhoto(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
-
     setMessage('')
 
     if (!file) return
@@ -53,11 +53,7 @@ export default function PlayerPage() {
     }
 
     if (fileSizeMB > maxSizeMB) {
-      setMessage(
-        `❌ Photo is too large (${fileSizeMB.toFixed(
-          1
-        )}MB). Please upload a photo under ${maxSizeMB}MB.`
-      )
+      setMessage(`❌ Photo is too large (${fileSizeMB.toFixed(1)}MB). Please upload a photo under ${maxSizeMB}MB.`)
       event.target.value = ''
       return
     }
@@ -66,10 +62,7 @@ export default function PlayerPage() {
       setUploadingPhoto(true)
       setMessage('Uploading profile photo...')
 
-      const cleanFileName = file.name
-        .toLowerCase()
-        .replace(/[^a-z0-9.]/g, '-')
-
+      const cleanFileName = file.name.toLowerCase().replace(/[^a-z0-9.]/g, '-')
       const filePath = `${slug}/${Date.now()}-${cleanFileName}`
 
       const { error: uploadError } = await supabase.storage
@@ -117,7 +110,6 @@ export default function PlayerPage() {
 
   async function uploadVideo(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
-
     setMessage('')
     setVideoUrl('')
 
@@ -133,11 +125,7 @@ export default function PlayerPage() {
     }
 
     if (fileSizeMB > maxSizeMB) {
-      setMessage(
-        `❌ Video is too large (${fileSizeMB.toFixed(
-          1
-        )}MB). Please upload a short clip under ${maxSizeMB}MB.`
-      )
+      setMessage(`❌ Video is too large (${fileSizeMB.toFixed(1)}MB). Please upload a short clip under ${maxSizeMB}MB.`)
       event.target.value = ''
       return
     }
@@ -146,10 +134,7 @@ export default function PlayerPage() {
       setUploadingVideo(true)
       setMessage('Uploading video. Please wait...')
 
-      const cleanFileName = file.name
-        .toLowerCase()
-        .replace(/[^a-z0-9.]/g, '-')
-
+      const cleanFileName = file.name.toLowerCase().replace(/[^a-z0-9.]/g, '-')
       const filePath = `${slug}/${Date.now()}-${cleanFileName}`
 
       const { error } = await supabase.storage
@@ -170,13 +155,25 @@ export default function PlayerPage() {
         .getPublicUrl(filePath)
 
       setVideoUrl(data.publicUrl)
-      setMessage('✅ Video uploaded successfully. Use the button below to open it.')
+      setProfileComplete(true)
+      setMessage('✅ Profile successfully created. Your Football CV is now ready and your video proof has been uploaded.')
       event.target.value = ''
     } catch (err) {
       setMessage('❌ Upload failed. Please try a smaller video.')
     } finally {
       setUploadingVideo(false)
     }
+  }
+
+  async function copyReferralCode() {
+    if (!player?.player_referral_code) return
+    await navigator.clipboard.writeText(player.player_referral_code)
+    setMessage('✅ Referral code copied.')
+  }
+
+  async function copyProfileLink() {
+    await navigator.clipboard.writeText(profileUrl)
+    setMessage('✅ Profile link copied.')
   }
 
   if (!player) {
@@ -192,6 +189,16 @@ export default function PlayerPage() {
 
   return (
     <main style={pageStyle}>
+      {profileComplete && (
+        <section style={successCardStyle}>
+          <h2>✅ Profile Successfully Created</h2>
+          <p>
+            Your FutbolKona Football CV is ready. Save your profile link and QR
+            code so others can view your football identity.
+          </p>
+        </section>
+      )}
+
       <section style={cardStyle}>
         <h1 style={titleStyle}>FutbolKona Football CV</h1>
 
@@ -221,11 +228,7 @@ export default function PlayerPage() {
             accept="image/*"
             onChange={uploadProfilePhoto}
             disabled={uploadingPhoto}
-            style={{
-              marginTop: '10px',
-              display: 'block',
-              color: 'white',
-            }}
+            style={{ marginTop: '10px', display: 'block', color: 'white' }}
           />
 
           {uploadingPhoto && (
@@ -234,6 +237,22 @@ export default function PlayerPage() {
             </p>
           )}
         </div>
+      </section>
+
+      <section style={cardStyle}>
+        <h2>My FK Referral Code</h2>
+        <p>
+          Share this code with other players. If they register using your code,
+          FK can track that you introduced them.
+        </p>
+
+        <div style={codeBoxStyle}>
+          {player.player_referral_code || 'Referral code not available yet'}
+        </div>
+
+        <button onClick={copyReferralCode} style={goldButtonStyle}>
+          Copy Referral Code
+        </button>
       </section>
 
       <section style={cardStyle}>
@@ -254,6 +273,10 @@ export default function PlayerPage() {
         <p style={{ marginTop: '20px', wordBreak: 'break-all' }}>
           {profileUrl}
         </p>
+
+        <button onClick={copyProfileLink} style={goldButtonStyle}>
+          Copy Profile Link
+        </button>
       </section>
 
       <section style={cardStyle}>
@@ -269,11 +292,7 @@ export default function PlayerPage() {
           accept="video/*"
           onChange={uploadVideo}
           disabled={uploadingVideo}
-          style={{
-            marginTop: '20px',
-            display: 'block',
-            color: 'white',
-          }}
+          style={{ marginTop: '20px', display: 'block', color: 'white' }}
         />
 
         {(uploadingVideo || uploadingPhoto) && (
@@ -319,6 +338,16 @@ const cardStyle = {
   border: '1px solid #374151',
 } as const
 
+const successCardStyle = {
+  maxWidth: '800px',
+  margin: '0 auto 30px auto',
+  padding: '25px',
+  borderRadius: '18px',
+  background: '#064e3b',
+  border: '1px solid #10b981',
+  color: 'white',
+} as const
+
 const titleStyle = {
   color: '#facc15',
   fontSize: '36px',
@@ -345,6 +374,30 @@ const photoPlaceholderStyle = {
   color: '#9ca3af',
   marginBottom: '20px',
   textAlign: 'center',
+} as const
+
+const codeBoxStyle = {
+  marginTop: '15px',
+  marginBottom: '15px',
+  padding: '16px',
+  borderRadius: '12px',
+  background: '#111827',
+  border: '1px solid #facc15',
+  color: '#facc15',
+  fontWeight: 'bold',
+  wordBreak: 'break-all',
+} as const
+
+const goldButtonStyle = {
+  display: 'inline-block',
+  marginTop: '10px',
+  padding: '14px 20px',
+  borderRadius: '12px',
+  background: '#facc15',
+  color: '#111827',
+  fontWeight: 'bold',
+  border: 'none',
+  cursor: 'pointer',
 } as const
 
 const videoButtonStyle = {
