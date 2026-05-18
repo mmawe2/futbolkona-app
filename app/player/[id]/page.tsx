@@ -13,7 +13,6 @@ export default function PlayerPage() {
   const [uploadingVideo, setUploadingVideo] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [message, setMessage] = useState('')
-  const [profileComplete, setProfileComplete] = useState(false)
 
   const profileUrl = `https://futbolkona-app.vercel.app/player/${slug}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(profileUrl)}`
@@ -35,6 +34,29 @@ export default function PlayerPage() {
     }
 
     setPlayer(data)
+    if (data?.video_url) {
+      setVideoUrl(data.video_url)
+    }
+  }
+
+  function getStatusLabel() {
+    if (player?.verification_stage === 'verified') {
+      return '✅ Verified Player'
+    }
+
+    if (player?.verification_stage === 'pending_review') {
+      return '🟡 Video Submitted — Pending FK Review'
+    }
+
+    if (player?.profile_completed) {
+      return '✅ Profile Completed'
+    }
+
+    if (player?.verification_stage === 'profile_created') {
+      return '🟠 Profile Created — Video Proof Required'
+    }
+
+    return '🟠 Pending'
   }
 
   async function uploadProfilePhoto(event: React.ChangeEvent<HTMLInputElement>) {
@@ -111,7 +133,6 @@ export default function PlayerPage() {
   async function uploadVideo(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     setMessage('')
-    setVideoUrl('')
 
     if (!file) return
 
@@ -154,9 +175,35 @@ export default function PlayerPage() {
         .from('player-videos')
         .getPublicUrl(filePath)
 
-      setVideoUrl(data.publicUrl)
-      setProfileComplete(true)
-      setMessage('✅ Profile successfully created. Your Football CV is now ready and your video proof has been uploaded.')
+      const publicUrl = data.publicUrl
+
+      const { error: updateError } = await supabase
+        .from('players')
+        .update({
+          video_url: publicUrl,
+          video_submitted: true,
+          profile_completed: true,
+          verification_stage: 'pending_review',
+          verification_status: 'pending',
+        })
+        .eq('slug', slug)
+
+      if (updateError) {
+        setMessage('❌ Video uploaded, but profile status update failed: ' + updateError.message)
+        return
+      }
+
+      setVideoUrl(publicUrl)
+      setPlayer({
+        ...player,
+        video_url: publicUrl,
+        video_submitted: true,
+        profile_completed: true,
+        verification_stage: 'pending_review',
+        verification_status: 'pending',
+      })
+
+      setMessage('✅ Profile successfully created. Video proof submitted. FK review is now pending.')
       event.target.value = ''
     } catch (err) {
       setMessage('❌ Upload failed. Please try a smaller video.')
@@ -189,12 +236,12 @@ export default function PlayerPage() {
 
   return (
     <main style={pageStyle}>
-      {profileComplete && (
+      {player.profile_completed && player.video_submitted && (
         <section style={successCardStyle}>
           <h2>✅ Profile Successfully Created</h2>
           <p>
-            Your FutbolKona Football CV is ready. Save your profile link and QR
-            code so others can view your football identity.
+            Your FutbolKona Football CV is ready. Video proof has been submitted
+            and your profile is now pending FK review.
           </p>
         </section>
       )}
@@ -217,7 +264,7 @@ export default function PlayerPage() {
         <p><strong>Phone:</strong> {player.phone}</p>
         <p><strong>School / Club:</strong> {player.school_club}</p>
         <p><strong>Position:</strong> {player.position}</p>
-        <p><strong>Verification Status:</strong> {player.verification_status || 'Pending'}</p>
+        <p><strong>Status:</strong> {getStatusLabel()}</p>
 
         <div style={{ marginTop: '20px' }}>
           <h3>Upload Profile Photo</h3>
